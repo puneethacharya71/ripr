@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ripr. — paste. rip. keep.</title>
+<meta name="description" content="ripr. — a student-built, ad-free grabber for Instagram reels, YouTube videos, shorts & music. By Puneeth Acharya.">
+<meta name="theme-color" content="#17150E">
+<meta property="og:title" content="ripr. — paste. rip. keep.">
+<meta property="og:description" content="Instagram reels, YouTube videos, shorts and music. No ads, no trackers, no sign-ups. Built by a student.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --paper:#F2EFE6; --ink:#17150E; --acc:#FF4D00;
+  --line:rgba(23,21,14,.15); --dline:rgba(242,239,230,.18);
+  --disp:'Bricolage Grotesque',serif; --mono:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.76,0,.24,1);
+}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--disp);
+  overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body.loading{overflow:hidden}
+::selection{background:var(--acc);color:var(--ink)}
+:focus-visible{outline:2px dashed var(--acc);outline-offset:3px}
+img{display:block;max-width:100%}
+button{font:inherit;background:none;border:0;cursor:pointer;color:inherit}
+input,textarea{font:inherit;color:inherit;caret-color:var(--acc)}
+a{color:inherit;text-decoration:none}
+section{scroll-margin-top:96px}
+.mono{font-family:var(--mono)}
+body.has-cursor, body.has-cursor *{cursor:none!important}
+
+/* noise + scroll progress */
+.noise{position:fixed;inset:-50%;z-index:9000;pointer-events:none;opacity:.055;
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2"/></filter><rect width="140" height="140" filter="url(%23n)"/></svg>')}
+#sprog{position:fixed;top:0;left:0;height:3px;width:100%;background:var(--acc);
+  transform-origin:0 0;transform:scaleX(0);z-index:1200}
+
+/* custom cursor */
+.cur{position:fixed;top:0;left:0;z-index:10000;pointer-events:none;opacity:0}
+.cur-dot{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#F2EFE6;mix-blend-mode:difference}
+.cur-ring{width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;border:1.5px solid #F2EFE6;
+  mix-blend-mode:difference;display:grid;place-items:center;
+  transition:width .25s var(--ease),height .25s var(--ease),margin .25s var(--ease),background .2s,border-color .2s}
+.cur-ring.grow{width:56px;height:56px;margin:-28px 0 0 -28px}
+.cur-ring.rip{width:66px;height:66px;margin:-33px 0 0 -33px;mix-blend-mode:normal;background:var(--acc);border-color:var(--acc)}
+.cur-ring.down{transform:scale(.8)}
+#cLab{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.12em;color:var(--ink);opacity:0;transition:opacity .15s}
+.cur-ring.rip #cLab{opacity:1}
+
+/* preloader */
+#shutter{position:fixed;inset:0;background:var(--acc);z-index:10001;transition:transform .7s var(--ease) .14s}
+#loader{position:fixed;inset:0;background:var(--ink);color:var(--paper);z-index:10002;transition:transform .7s var(--ease)}
+#loader.done{transform:translateY(-101%)} #shutter.done{transform:translateY(-101%)}
+.ld-top{position:absolute;top:22px;left:24px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.blink{width:9px;height:9px;background:var(--acc);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.ld-brand{position:absolute;top:50%;left:24px;transform:translateY(-50%);font-weight:800;
+  font-size:clamp(3rem,9vw,7rem);line-height:1;letter-spacing:-.03em}
+.ld-brand span{color:var(--acc)}
+.ld-num{position:absolute;right:24px;bottom:6px;font-weight:800;font-size:clamp(5rem,16vw,13rem);line-height:1;font-variant-numeric:tabular-nums}
+.ld-bar{position:absolute;left:0;bottom:0;width:100%;height:6px}
+.ld-bar i{display:block;height:100%;background:var(--acc);transform:scaleX(0);transform-origin:0 0}
+
+/* header */
+header{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;
+  justify-content:space-between;padding:0 5vw;height:64px;border-bottom:1.5px solid transparent;
+  transition:background .3s,border-color .3s}
+header.solid{background:var(--paper);border-color:var(--ink)}
+.logo{font-weight:800;font-size:1.5rem;letter-spacing:-.03em;line-height:1;display:flex;align-items:baseline;gap:4px}
+.logo b{color:var(--acc)}
+.logo sup{font-family:var(--mono);font-weight:400;font-size:.55rem;letter-spacing:.1em}
+.h-nav{display:flex;gap:26px;font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
+.h-nav a{position:relative;padding:4px 0}
+.h-nav a::after{content:'';position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--acc);transition:width .25s var(--ease)}
+.h-nav a:hover::after{width:100%}
+.h-right{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:.72rem;letter-spacing:.08em}
+.h-clock{font-variant-numeric:tabular-nums}
+.h-nads{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--ink);padding:5px 10px;text-transform:uppercase}
+.h-nads i{width:7px;height:7px;background:var(--acc);border-radius:50%}
+#installBtn{display:none;align-items:center;gap:8px;border:1.5px solid var(--acc);background:var(--acc);
+  padding:6px 12px;font-weight:700;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;transition:.2s}
+#installBtn.show{display:inline-flex}
+#installBtn:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+#installBtn svg{width:13px;height:13px}
+.h-ibtn{width:34px;height:34px;border:1.5px solid var(--ink);display:grid;place-items:center;transition:.2s;background:var(--paper)}
+.h-ibtn svg{width:16px;height:16px}
+.h-ibtn:hover{background:var(--acc);transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+.owner-tag{display:none;align-items:center;gap:7px;background:var(--acc);color:var(--ink);
+  padding:6px 12px;font-weight:700;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
+body.owner .owner-tag{display:inline-flex}
+.owner-tag svg{width:13px;height:13px}
+
+/* hero */
+#hero{position:relative;min-height:100svh;display:flex;flex-direction:column;padding:120px 5vw 0;overflow:hidden}
+.h-lines{position:absolute;inset:0;display:flex;justify-content:space-evenly;pointer-events:none}
+.h-lines i{width:1px;background:var(--ink);opacity:.07}
+.kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  display:flex;align-items:center;gap:10px;margin-bottom:26px;opacity:0;transform:translateY(14px);transition:.7s var(--ease) .45s}
+.kicker b{color:var(--acc);font-weight:700}
+body.ready .kicker{opacity:1;transform:none}
+.h-title{font-weight:800;text-transform:uppercase;line-height:.92;letter-spacing:-.025em;font-size:clamp(2.9rem,9.5vw,8.2rem)}
+.hl{display:block;overflow:hidden;padding-bottom:.06em}
+.hl-in{display:inline-block;transform:translateY(115%);transition:transform .9s var(--ease)}
+.hl:nth-child(1) .hl-in{transition-delay:.15s}.hl:nth-child(2) .hl-in{transition-delay:.27s}.hl:nth-child(3) .hl-in{transition-delay:.39s}
+body.ready .hl-in{transform:none}
+.hl-acc .hl-in{color:var(--acc)}
+.hl-out .hl-in{color:transparent;-webkit-text-stroke:2.5px var(--ink)}
+@supports not (-webkit-text-stroke:2px black){.hl-out .hl-in{color:var(--ink)}}
+.h-sub{max-width:560px;margin-top:26px;font-size:1.02rem;line-height:1.55;color:rgba(23,21,14,.85);
+  opacity:0;transform:translateY(14px);transition:.7s var(--ease) .55s}
+body.ready .h-sub{opacity:1;transform:none}
+.chips-lab{font-family:var(--mono);font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;
+  margin:28px 0 10px;color:rgba(23,21,14,.6);opacity:0;transition:.7s var(--ease) .62s}
+body.ready .chips-lab{opacity:1}
+.chips{display:flex;flex-wrap:wrap;gap:8px;opacity:0;transform:translateY(10px);transition:.7s var(--ease) .68s}
+body.ready .chips{opacity:1;transform:none}
+.chip{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;
+  border:1.5px solid var(--ink);border-radius:999px;padding:.42em 1em;display:inline-flex;align-items:center;gap:7px;transition:background .2s,color .2s,transform .15s}
+.chip svg{width:13px;height:13px}
+.chip:hover{background:var(--ink);color:var(--paper)}
+.chip:active{transform:scale(.95)}
+.chip.on{background:var(--acc);border-color:var(--acc);color:var(--ink)}
+
+/* tabs + grabber */
+.tabs{display:flex;border:2px solid var(--ink);width:max-content;margin-top:32px;
+  box-shadow:5px 5px 0 var(--ink);opacity:0;transform:translateY(18px);transition:.8s var(--ease) .5s}
+body.ready .tabs{opacity:1;transform:none}
+.tab{font-family:var(--mono);font-weight:700;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:11px 22px;transition:.15s}
+.tab.on{background:var(--ink);color:var(--paper)}
+.tab:hover:not(.on){background:rgba(23,21,14,.08)}
+.grabber{margin-top:14px;max-width:860px;display:flex;align-items:stretch;background:var(--paper);
+  border:2px solid var(--ink);box-shadow:7px 7px 0 var(--ink);opacity:0;transform:translateY(22px);
+  transition:.8s var(--ease) .55s;position:relative;z-index:2}
+body.ready .grabber{opacity:1;transform:none}
+.grabber.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.g-ic{display:grid;place-items:center;padding:0 4px 0 20px}
+.g-ic svg{width:20px;height:20px}
+#url{flex:1;min-width:0;background:transparent;border:0;outline:none;font-size:clamp(.95rem,2vw,1.15rem);padding:20px 12px;font-weight:500}
+#url::placeholder{color:rgba(23,21,14,.4)}
+.g-paste{font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:0 18px;border-left:1.5px dashed var(--line);display:flex;align-items:center;gap:8px;transition:background .2s}
+.g-paste svg{width:15px;height:15px}
+.g-paste:hover{background:var(--ink);color:var(--paper)}
+.g-rip{font-family:var(--mono);font-weight:700;font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--acc);color:var(--ink);padding:0 26px;margin:6px;border:2px solid var(--ink);
+  display:inline-flex;align-items:center;gap:9px;transition:transform .15s,box-shadow .15s;box-shadow:3px 3px 0 var(--ink)}
+.g-rip svg{width:16px;height:16px}
+.g-rip:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--ink)}
+.g-rip:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink)}
+.g-rip:disabled{opacity:.55;transform:none;box-shadow:3px 3px 0 var(--ink)}
+
+/* stage: parse log + result */
+#stage{max-width:860px;margin-top:18px}
+.riplog{background:var(--ink);color:var(--paper);border:2px solid var(--ink);padding:18px 20px;
+  font-family:var(--mono);font-size:.78rem;line-height:1.9;animation:pop .5s var(--ease)}
+.riplog .a{color:var(--acc);font-weight:700}
+.riplog .car{display:inline-block;width:8px;height:13px;background:var(--acc);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes pop{0%{opacity:0;transform:translateY(16px) scale(.97)}60%{transform:translateY(-3px)}100%{opacity:1;transform:none}}
+.result{display:grid;grid-template-columns:300px 1fr;background:var(--paper);border:2px solid var(--ink);
+  box-shadow:7px 7px 0 var(--ink);animation:pop .55s var(--ease)}
+.thumb{position:relative;border-right:2px solid var(--ink);min-height:190px;overflow:hidden;background:var(--ink)}
+.thumb img{width:100%;height:100%;object-fit:cover;filter:saturate(.9) contrast(1.05)}
+.badge{position:absolute;right:10px;bottom:10px;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:.7rem;padding:4px 8px}
+.ptag{position:absolute;left:10px;top:10px;background:var(--acc);color:var(--ink);font-family:var(--mono);font-weight:700;font-size:.65rem;letter-spacing:.1em;padding:4px 8px}
+.rmeta{padding:20px 22px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.rtitle{font-weight:700;font-size:1.2rem;letter-spacing:-.01em;overflow-wrap:anywhere}
+.rsub{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(23,21,14,.6)}
+.fmt-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.fmt-lab{font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.14em;width:52px;color:rgba(23,21,14,.6)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:.7rem;border:1.5px solid var(--ink);padding:.4em .9em;transition:.15s}
+.pill:hover{background:var(--ink);color:var(--paper)}
+.pill.sel{background:var(--ink);color:var(--paper)}
+.pill:disabled{opacity:.5}
+.fsize{font-family:var(--mono);font-size:.72rem;letter-spacing:.05em}
+.fsize b{color:var(--acc)}
+.dl{position:relative;overflow:hidden;align-self:flex-start;font-family:var(--mono);font-weight:700;font-size:.8rem;
+  letter-spacing:.08em;text-transform:uppercase;border:2px solid var(--ink);background:var(--ink);
+  color:var(--paper);padding:13px 22px;transition:transform .15s,box-shadow .15s;box-shadow:3px 3px 0 var(--ink)}
+.dl .prog{position:absolute;inset:0;width:0;background:var(--acc)}
+.dl .lab{position:relative;z-index:1;display:inline-flex;align-items:center;gap:9px;color:var(--paper)}
+.dl.ripping .lab{color:var(--ink)}
+.dl svg{width:15px;height:15px}
+.dl:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 rgba(23,21,14,.35)}
+.dl:disabled{opacity:.85;transform:none}
+
+/* batch queue */
+#batchPanel{margin-top:14px;max-width:860px}
+.b-box{width:100%;background:var(--paper);border:2px solid var(--ink);box-shadow:7px 7px 0 var(--ink);
+  padding:16px;font-family:var(--mono);font-size:.85rem;line-height:1.8;resize:vertical;min-height:130px;outline:none}
+.b-box:focus{border-color:var(--acc)}
+.b-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:14px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(23,21,14,.6)}
+#queue{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+.q-row{display:grid;grid-template-columns:34px 92px 1fr 170px;gap:12px;align-items:center;
+  border:1.5px solid var(--ink);padding:12px 14px;background:var(--paper);animation:pop .4s var(--ease)}
+.q-row.err{border-color:var(--acc)}
+.q-idx{font-family:var(--mono);font-size:.7rem;color:rgba(23,21,14,.5)}
+.q-plat{font-family:var(--mono);font-weight:700;font-size:.62rem;letter-spacing:.08em;background:var(--ink);color:var(--paper);padding:4px 7px;text-align:center}
+.q-url{font-family:var(--mono);font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q-main{display:flex;flex-direction:column;gap:6px;min-width:0}
+.q-status{font-family:var(--mono);font-size:.68rem;letter-spacing:.05em;color:rgba(23,21,14,.7)}
+.q-row.done .q-status{color:var(--ink);font-weight:700}
+.q-bar{height:6px;border:1px solid var(--ink)}
+.q-bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .12s linear}
+#bSummary{margin-top:14px;font-family:var(--mono);font-size:.74rem;letter-spacing:.05em}
+#bSummary b{color:var(--acc)}
+
+/* hero meta strip + sticker */
+.mstrip{margin-top:auto;border-top:2px solid var(--ink);display:grid;grid-template-columns:repeat(4,1fr);
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;opacity:0;transition:.7s var(--ease) .75s}
+body.ready .mstrip{opacity:1}
+.mstrip>div{padding:16px 0 20px;border-left:1px solid var(--line);padding-left:18px}
+.mstrip>div:first-child{border-left:0;padding-left:0}
+.mstrip small{display:block;color:rgba(23,21,14,.55);margin-bottom:4px;font-size:.62rem}
+.mstrip b{font-size:.95rem;color:var(--acc);font-variant-numeric:tabular-nums}
+.sticker{position:absolute;right:6vw;top:18vh;width:158px;height:158px;z-index:3;opacity:0;transform:scale(.6) rotate(-20deg);transition:.8s var(--ease) .8s}
+body.ready .sticker{opacity:1;transform:none}
+.sticker svg.ring{width:100%;height:100%;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sticker .ring text{font-family:var(--mono);font-weight:700;font-size:12.5px;letter-spacing:1px;fill:var(--ink)}
+.sticker .mid{position:absolute;inset:0;display:grid;place-items:center}
+.sticker .mid i{width:56px;height:56px;background:var(--acc);border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;transition:transform .2s}
+.sticker:hover .mid i{transform:scale(1.12) rotate(8deg)}
+.sticker .mid svg{width:22px;height:22px}
+
+/* marquee */
+.marquee{background:var(--ink);color:var(--paper);border-block:2px solid var(--ink);overflow:hidden}
+.mq-track{display:flex;width:max-content;animation:mq 26s linear infinite}
+.marquee:hover .mq-track{animation-play-state:paused}
+@keyframes mq{to{transform:translateX(-50%)}}
+.mq-g{display:flex;align-items:center}
+.mq-g span{font-family:var(--mono);font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;padding:14px 26px;white-space:nowrap}
+.mq-g svg{width:14px;height:14px;color:var(--acc);flex:none}
+
+/* sections */
+.sec{padding:90px 5vw}
+.sec-head{border-top:2px solid var(--ink);padding-top:18px;margin-bottom:56px;display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap}
+.sec-num{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;color:var(--acc);font-weight:700}
+.sec-title{font-weight:800;text-transform:uppercase;letter-spacing:-.02em;font-size:clamp(2rem,5.5vw,3.6rem);line-height:1}
+.sec-note{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(23,21,14,.55)}
+
+/* how — steps */
+.step{display:grid;grid-template-columns:180px 1fr;gap:24px;align-items:center;border-top:2px solid var(--ink);padding:34px 0;max-width:1000px}
+.step:nth-child(even){margin-left:10%}
+.step:last-child{border-bottom:2px solid var(--ink)}
+.s-num{font-weight:800;font-size:clamp(3rem,7vw,5.5rem);line-height:1;color:transparent;-webkit-text-stroke:2.5px var(--ink);transition:color .2s}
+.step:hover .s-num{color:var(--acc);-webkit-text-stroke-color:var(--acc)}
+.s-body h3{font-weight:700;font-size:1.35rem;text-transform:uppercase;letter-spacing:-.01em;margin-bottom:6px}
+.s-body p{color:rgba(23,21,14,.8);line-height:1.55;max-width:520px;font-size:.98rem}
+.s-tag{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(23,21,14,.5);display:block;margin-top:10px}
+
+/* why — receipts */
+.mani-big{font-weight:800;text-transform:uppercase;font-size:clamp(1.7rem,4.6vw,3.1rem);line-height:1.06;letter-spacing:-.02em;max-width:920px;margin-bottom:44px}
+.mani-big em{font-style:normal;color:var(--acc)}
+.vs{border:2px solid var(--ink);max-width:980px;box-shadow:8px 8px 0 var(--ink)}
+.vs-row{display:grid;grid-template-columns:1fr 1fr;border-top:1.5px solid var(--ink)}
+.vs-row:first-child{border-top:0}
+.vs-head{background:var(--ink);color:var(--paper);font-family:var(--mono);font-weight:700;font-size:.66rem;letter-spacing:.16em;text-transform:uppercase}
+.vs-head .vs-cell:last-child{color:var(--acc)}
+.vs-cell{padding:17px 18px;font-size:.95rem;display:flex;gap:11px;align-items:center;min-width:0}
+.vs-cell:first-child{border-right:1.5px solid var(--ink);color:rgba(23,21,14,.55)}
+.vs-head .vs-cell:first-child{color:rgba(242,239,230,.6);border-right-color:var(--dline)}
+.vs-cell svg{width:17px;height:17px;flex:none}
+.vs-cell .x{color:rgba(23,21,14,.4)}
+.vs-cell .ok{color:var(--acc)}
+
+/* menu */
+.menu-row{display:grid;grid-template-columns:44px 1.4fr 1fr .7fr .7fr .6fr;gap:14px;align-items:center;
+  border-top:1.5px solid var(--ink);padding:20px 8px;transition:background .2s,color .2s}
+.menu-row:last-of-type{border-bottom:2px solid var(--ink)}
+.menu-head{font-family:var(--mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(23,21,14,.5);border-top:0;padding-bottom:12px}
+.menu-row:not(.menu-head):hover{background:var(--ink);color:var(--paper)}
+.m-ic{width:22px;height:22px}
+.m-name{font-weight:700;font-size:1.15rem;text-transform:uppercase;letter-spacing:-.01em;display:flex;align-items:center;gap:14px}
+.m-name .dot{width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pulse 1.6s infinite;flex:none}
+@keyframes pulse{50%{opacity:.25}}
+.m-cell{font-family:var(--mono);font-size:.74rem;letter-spacing:.04em}
+.m-price{font-family:var(--mono);font-weight:700;font-size:.85rem;color:var(--acc);text-align:right}
+
+/* faq */
+.faq-item{border-top:1.5px solid var(--ink);max-width:860px}
+.faq-item:last-child{border-bottom:2px solid var(--ink)}
+.faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:24px 4px;text-align:left;font-weight:700;font-size:1.2rem;letter-spacing:-.01em}
+.faq-q svg{width:20px;height:20px;flex:none;color:var(--acc);transition:transform .35s var(--ease)}
+.faq-item.open .faq-q svg{transform:rotate(45deg)}
+.faq-a{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+.faq-item.open .faq-a{grid-template-rows:1fr}
+.faq-a>div{overflow:hidden}
+.faq-a p{padding:0 4px 26px;max-width:640px;line-height:1.6;color:rgba(23,21,14,.85)}
+
+/* owner console */
+#console{background:var(--ink);color:var(--paper)}
+#console .sec-head{border-color:var(--paper)}
+#console .sec-note{color:rgba(242,239,230,.55)}
+.con-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:56px;margin-bottom:52px}
+.con-lab{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(242,239,230,.6);display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.con-lab svg{width:14px;height:14px;color:var(--acc)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pulse 1.4s infinite}
+.c-timer{font-family:var(--mono);font-weight:700;font-size:clamp(2.6rem,6vw,4.4rem);font-variant-numeric:tabular-nums;line-height:1;margin-bottom:26px}
+.c-timer small{font-size:.35em;color:var(--acc);letter-spacing:.1em}
+.kv{display:flex;justify-content:space-between;gap:14px;padding:11px 2px;border-bottom:1px dashed var(--dline);font-family:var(--mono);font-size:.76rem}
+.kv span{color:rgba(242,239,230,.6);text-transform:uppercase;letter-spacing:.1em;font-size:.66rem}
+.kv b{font-weight:400;text-align:right;overflow-wrap:anywhere}
+.totals{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--dline);margin-bottom:22px}
+.tot{padding:22px;border-right:1px solid var(--dline);border-bottom:1px solid var(--dline)}
+.tot:nth-child(2n){border-right:0}
+.tot:nth-child(n+3){border-bottom:0}
+.tot small{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(242,239,230,.55);display:block;margin-bottom:8px}
+.tot b{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums}
+.tot b i{font-style:normal;color:var(--acc)}
+.con-btns{display:flex;gap:10px;flex-wrap:wrap}
+.cbtn{font-family:var(--mono);font-weight:700;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:12px 18px;border:1.5px solid var(--paper);display:inline-flex;align-items:center;gap:8px;transition:.2s}
+.cbtn svg{width:14px;height:14px}
+.cbtn.fill{background:var(--acc);border-color:var(--acc);color:var(--ink)}
+.cbtn.fill:hover{background:var(--paper);border-color:var(--paper)}
+.cbtn.ghost:hover{background:var(--paper);color:var(--ink)}
+.cbtn.ghost.warn{border-color:var(--acc);color:var(--acc)}
+.cbtn.ghost.warn:hover{background:var(--acc);color:var(--ink)}
+.tbl-wrap{border:1.5px solid var(--dline);max-height:360px;overflow:auto}
+.tbl-wrap::-webkit-scrollbar{width:8px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--acc)}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.72rem}
+th{position:sticky;top:0;background:var(--ink);text-align:left;font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.6rem;color:rgba(242,239,230,.6);padding:14px 16px;border-bottom:1.5px solid var(--dline)}
+td{padding:12px 16px;border-bottom:1px solid var(--dline);font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:hover{background:rgba(242,239,230,.07)}
+tr.me td{color:var(--acc)}
+.empty{padding:34px;text-align:center;font-family:var(--mono);font-size:.75rem;color:rgba(242,239,230,.5)}
+.con-foot{margin-top:16px;font-family:var(--mono);font-size:.66rem;letter-spacing:.06em;color:rgba(242,239,230,.5);max-width:760px;line-height:1.7}
+
+/* footer */
+footer{position:relative;padding:80px 5vw 40px;overflow:hidden}
+.f-mark{position:absolute;left:50%;bottom:-.28em;transform:translateX(-50%);font-weight:800;
+  font-size:clamp(8rem,24vw,20rem);line-height:1;letter-spacing:-.04em;color:transparent;
+  -webkit-text-stroke:2px rgba(23,21,14,.14);pointer-events:none;white-space:nowrap}
+.f-row{position:relative;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.f-cred{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;line-height:2}
+.f-cred b{color:var(--acc)}
+.folio{display:inline-flex;align-items:center;gap:10px;border:2px solid var(--ink);background:var(--paper);
+  padding:14px 20px;font-family:var(--mono);font-weight:700;font-size:.75rem;letter-spacing:.1em;
+  text-transform:uppercase;box-shadow:4px 4px 0 var(--ink);transition:.2s;margin-top:16px}
+.folio svg{width:15px;height:15px}
+.folio:hover{background:var(--acc);transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+.top-btn{width:52px;height:52px;border:2px solid var(--ink);display:grid;place-items:center;background:var(--paper);transition:.2s;box-shadow:4px 4px 0 var(--ink)}
+.top-btn:hover{background:var(--acc);transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--ink)}
+.top-btn svg{width:20px;height:20px}
+
+/* modals */
+.modal-back{position:fixed;inset:0;background:rgba(23,21,14,.55);z-index:9500;display:grid;place-items:center;padding:20px}
+.modal{background:var(--paper);border:2px solid var(--ink);box-shadow:10px 10px 0 var(--ink);padding:34px;width:min(440px,100%);animation:pop .35s var(--ease)}
+.modal.shake{animation:shake .4s}
+.g-kicker{font-size:.64rem;letter-spacing:.2em;color:var(--acc);font-weight:700;display:flex;align-items:center;gap:9px}
+.g-kicker svg{width:14px;height:14px}
+.modal h3{font-weight:800;text-transform:uppercase;font-size:1.5rem;margin:10px 0 8px;letter-spacing:-.01em}
+.g-sub{font-family:var(--mono);font-size:.68rem;letter-spacing:.05em;color:rgba(23,21,14,.6);line-height:1.7;margin-bottom:18px}
+#gatePass{width:100%;border:2px solid var(--ink);background:transparent;padding:13px 14px;font-family:var(--mono);outline:none;margin-bottom:14px;font-size:.9rem}
+#gatePass:focus{border-color:var(--acc)}
+.g-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.g-actions .cbtn{border-color:var(--ink);color:var(--ink)}
+.g-actions .cbtn.ghost:hover{background:var(--ink);color:var(--paper)}
+.g-err{color:var(--acc);font-family:var(--mono);font-size:.68rem;margin-top:12px;min-height:1em;font-weight:700}
+
+/* qr share */
+.qr-modal{width:min(420px,100%)}
+.qr-tabs{display:flex;gap:8px;margin-top:16px}
+.qr-tab.on{background:var(--ink);color:var(--paper)}
+.qr-stage{display:grid;place-items:center;border:2px solid var(--ink);background:#FFFDF6;
+  padding:16px;margin:16px 0 12px;box-shadow:5px 5px 0 var(--ink)}
+#qrCanvas{display:block;width:min(248px,64vw);height:auto;image-rendering:pixelated}
+.qr-fallback{font-family:var(--mono);font-size:.72rem;color:var(--acc);padding:24px 10px;text-align:center;line-height:1.7}
+.qr-url{font-size:.66rem;letter-spacing:.03em;word-break:break-all;background:rgba(23,21,14,.06);
+  border:1.5px dashed var(--line);padding:10px 12px;margin-bottom:14px;color:rgba(23,21,14,.75)}
+
+/* toasts + reveal */
+#toasts{position:fixed;left:20px;bottom:20px;z-index:9999;display:flex;flex-direction:column;gap:10px}
+.toast{display:flex;align-items:center;gap:12px;background:var(--ink);color:var(--paper);border-left:4px solid var(--acc);
+  padding:14px 18px;font-family:var(--mono);font-size:.74rem;max-width:380px;opacity:0;transform:translateY(16px);transition:.4s var(--ease)}
+.toast.show{opacity:1;transform:none}
+.toast svg{width:16px;height:16px;color:var(--acc);flex:none}
+.rv{opacity:0;transform:translateY(30px);transition:opacity .7s var(--ease),transform .7s var(--ease);transition-delay:var(--d,0s)}
+.rv.in{opacity:1;transform:none}
+
+/* responsive */
+@media(max-width:900px){
+  .sticker{display:none}
+  .result{grid-template-columns:1fr}
+  .thumb{border-right:0;border-bottom:2px solid var(--ink);max-height:210px}
+  .con-grid{grid-template-columns:1fr}
+  .menu-row{grid-template-columns:30px 1.2fr 1fr .8fr}
+  .m-hide{display:none}
+  .step{grid-template-columns:1fr;gap:8px}
+  .step:nth-child(even){margin-left:0}
+  .q-row{grid-template-columns:34px 80px 1fr}
+  .q-main{grid-column:1/-1}
+}
+@media(max-width:680px){
+  .h-nav{display:none}
+  .mstrip{grid-template-columns:1fr 1fr}
+  .mstrip>div{padding:14px 0 14px 14px}
+  .mstrip>div:nth-child(odd){border-left:0;padding-left:0}
+  .grabber{flex-wrap:wrap}
+  .g-ic{display:none}
+  #url{width:100%;padding:16px;border-bottom:1.5px dashed var(--line)}
+  .g-paste{flex:1;justify-content:center;padding:14px;border-left:0}
+  .g-rip{flex:1;justify-content:center;padding:14px;margin:6px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .mq-track{animation:none}
+}
+</style>
+</head>
+<body class="loading">
+
+<div id="shutter"></div>
+<div id="loader">
+  <div class="ld-top mono">RIPR.V3 — BOOTING GRABBER <span class="blink"></span></div>
+  <div class="ld-brand">ripr<span>.</span></div>
+  <div class="ld-num" id="ldNum">00</div>
+  <div class="ld-bar"><i id="ldBar"></i></div>
+</div>
+
+<div class="noise"></div>
+<div id="sprog"></div>
+
+<div class="cur" id="cDot"><div class="cur-dot"></div></div>
+<div class="cur" id="cRing"><div class="cur-ring"><span id="cLab"></span></div></div>
+
+<header id="hdr">
+  <a class="logo" href="#hero" data-hover>ripr<b>.</b><sup>V3.0</sup></a>
+  <nav class="h-nav">
+    <a href="#how" data-hover>How</a>
+    <a href="#why" data-hover>Why</a>
+    <a href="#menu" data-hover>Menu</a>
+    <a href="#faq" data-hover>FAQ</a>
+  </nav>
+  <div class="h-right">
+    <span class="h-nads"><i></i>0 ads · 0 trackers</span>
+    <button id="installBtn" data-hover><i data-lucide="download"></i>Install app</button>
+    <button class="h-ibtn" id="qrBtn" data-hover title="QR — scan to open on your phone" aria-label="Show QR code"><i data-lucide="qr-code"></i></button>
+    <button class="owner-tag" id="ownerTag" data-hover title="click twice to lock"><i data-lucide="key-round"></i>OWNER</button>
+    <span class="h-clock" id="hClock">--:--:--</span>
+  </div>
+</header>
+
+<main>
+<!-- ================= HERO ================= -->
+<section id="hero">
+  <div class="h-lines"><i></i><i></i><i></i><i></i><i></i></div>
+
+  <div class="kicker"><span class="blink"></span> STUDENT BUILT · V3.0 · <b id="modeK">DEMO</b> MODE · BY PUNEETH ACHARYA</div>
+
+  <h1 class="h-title">
+    <span class="hl"><span class="hl-in">PASTE THE LINK.</span></span>
+    <span class="hl hl-acc"><span class="hl-in">RIP THE MEDIA.</span></span>
+    <span class="hl hl-out"><span class="hl-in">KEEP IT FOREVER.</span></span>
+  </h1>
+
+  <p class="h-sub">Instagram reels, YouTube videos, shorts and music — one orange bar,
+    zero ads, zero trackers, zero sign-ups. The downloader that respects you.</p>
+
+  <div class="chips-lab">Supported — tap one to load a sample link</div>
+  <div class="chips">
+    <button class="chip" data-p="reel" data-sample="https://www.instagram.com/reel/Cx7YzQwLm2P/" data-hover><i data-lucide="instagram"></i>Instagram Reel</button>
+    <button class="chip" data-p="insta" data-sample="https://www.instagram.com/p/Cw2AbCdEfGh/" data-hover><i data-lucide="instagram"></i>Instagram Video</button>
+    <button class="chip" data-p="youtube" data-sample="https://www.youtube.com/watch?v=dQw4w9WgXcQ" data-hover><i data-lucide="youtube"></i>YouTube Video</button>
+    <button class="chip" data-p="shorts" data-sample="https://www.youtube.com/shorts/tPEE9ZwTmy0" data-hover><i data-lucide="youtube"></i>Shorts</button>
+    <button class="chip" data-p="ytmusic" data-sample="https://music.youtube.com/watch?v=9bZkp7q19f0" data-hover><i data-lucide="music"></i>YT Music</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab on" data-tab="single" data-hover>Single link</button>
+    <button class="tab" data-tab="batch" data-hover>Batch queue</button>
+  </div>
+
+  <div class="grabber" id="grabber">
+    <span class="g-ic"><i data-lucide="link-2"></i></span>
+    <input id="url" type="text" spellcheck="false" autocomplete="off" placeholder="paste an Instagram / YouTube link here…">
+    <button class="g-paste" id="pasteBtn" data-hover><i data-lucide="clipboard"></i>Paste</button>
+    <button class="g-rip" id="ripBtn" data-cursor="RIP"><i data-lucide="zap"></i><span>Rip it</span></button>
+  </div>
+
+  <div id="batchPanel" hidden>
+    <textarea class="b-box" id="batchBox" spellcheck="false"
+      placeholder="one link per line — mix reels, videos, shorts, music, anything:&#10;https://www.instagram.com/reel/Cx7YzQwLm2P/&#10;https://youtu.be/dQw4w9WgXcQ&#10;https://www.youtube.com/shorts/tPEE9ZwTmy0"></textarea>
+    <div class="b-row">
+      <span id="bCount">0 valid links detected</span>
+      <button class="g-rip" id="bGo" data-cursor="RIP"><i data-lucide="layers"></i><span>Rip all</span></button>
+    </div>
+    <div id="queue"></div>
+    <div id="bSummary"></div>
+  </div>
+
+  <div id="stage"></div>
+
+  <button class="sticker" id="sticker" aria-label="scroll to the grab bar">
+    <svg class="ring" viewBox="0 0 120 120">
+      <defs><path id="circ" d="M60,60 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0"/></defs>
+      <text textLength="292" lengthAdjust="spacingAndGlyphs"><textPath href="#circ">PASTE • RIP • KEEP • NO ADS • NO TRACKERS • </textPath></text>
+    </svg>
+    <span class="mid"><i><svg viewBox="0 0 24 24" fill="none" stroke="#17150E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></i></span>
+  </button>
+
+  <div class="mstrip">
+    <div><small>Local time</small><b id="mClock">--:--:--</b></div>
+    <div><small>Your session</small><b id="mSession">00:00</b></div>
+    <div><small>Mode</small><b id="mMode">DEMO</b></div>
+    <div><small>Rips this session</small><b id="mGrabs">0</b></div>
+  </div>
+</section>
+
+<!-- ================= MARQUEE ================= -->
+<div class="marquee" aria-hidden="true">
+  <div class="mq-track" id="mqTrack">
+    <div class="mq-g">
+      <span>Instagram Reels</span><i data-lucide="asterisk"></i>
+      <span>YouTube Video</span><i data-lucide="asterisk"></i>
+      <span>Shorts</span><i data-lucide="asterisk"></i>
+      <span>MP3 @ 320kbps</span><i data-lucide="asterisk"></i>
+      <span>No Ads</span><i data-lucide="asterisk"></i>
+      <span>No Trackers</span><i data-lucide="asterisk"></i>
+      <span>No Signups</span><i data-lucide="asterisk"></i>
+    </div>
+  </div>
+</div>
+
+<!-- ================= HOW ================= -->
+<section class="sec" id="how">
+  <div class="sec-head rv">
+    <div><div class="sec-num">01 — HOW IT WORKS</div>
+      <h2 class="sec-title">Four moves. That's it.</h2></div>
+    <div class="sec-note">Average rip time: seconds</div>
+  </div>
+  <div class="step rv"><div class="s-num">01</div>
+    <div class="s-body"><h3>Copy the link</h3>
+      <p>In the YouTube or Instagram app, tap Share → Copy Link. Genuinely the hardest part of the whole process.</p>
+      <span class="s-tag mono">source: any share sheet</span></div></div>
+  <div class="step rv"><div class="s-num">02</div>
+    <div class="s-body"><h3>Paste it in the bar</h3>
+      <p>Drop it in and hit Enter — or just press Ctrl+V anywhere on this page and ripr. catches it automatically. Got ten links? Switch to Batch mode.</p>
+      <span class="s-tag mono">paste anywhere · batch queue</span></div></div>
+  <div class="step rv"><div class="s-num">03</div>
+    <div class="s-body"><h3>Pick your flavor</h3>
+      <p>MP4 up to 1080p, or pure audio at MP3 320kbps. Sizes are estimated before you commit to anything.</p>
+      <span class="s-tag mono">mp4 · mp3 · est. size shown</span></div></div>
+  <div class="step rv"><div class="s-num">04</div>
+    <div class="s-body"><h3>Rip &amp; keep</h3>
+      <p>One tap, a live progress readout, and the file is yours. No pop-ups, no redirect mazes, no "premium" nagging. Ever.</p>
+      <span class="s-tag mono">zero ads, always</span></div></div>
+</section>
+
+<!-- ================= WHY ================= -->
+<section class="sec" id="why" style="padding-top:20px">
+  <div class="sec-head rv">
+    <div><div class="sec-num">02 — WHY RIPR. EXISTS</div>
+      <h2 class="sec-title">The receipts</h2></div>
+    <div class="sec-note">Other downloaders vs. this one</div>
+  </div>
+  <p class="mani-big rv">Every other downloader site monetizes <em>you</em>. This one was built by a student who got tired of it — to <em>set you free</em>.</p>
+  <div class="vs rv">
+    <div class="vs-row vs-head"><div class="vs-cell"><i data-lucide="ban"></i>Typical downloader site</div><div class="vs-cell"><i data-lucide="shield-check"></i>ripr.</div></div>
+    <div class="vs-row"><div class="vs-cell"><i class="x" data-lucide="x"></i>five pop-ups before any button works</div><div class="vs-cell"><i class="ok" data-lucide="check"></i>zero pop-ups, one real button</div></div>
+    <div class="vs-row"><div class="vs-cell"><i class="x" data-lucide="x"></i>fake download buttons wired to ad networks</div><div class="vs-cell"><i class="ok" data-lucide="check"></i>the only button rips the file</div></div>
+    <div class="vs-row"><div class="vs-cell"><i class="x" data-lucide="x"></i>third-party trackers on every click</div><div class="vs-cell"><i class="ok" data-lucide="check"></i>no trackers, no ad scripts, ever</div></div>
+    <div class="vs-row"><div class="vs-cell"><i class="x" data-lucide="x"></i>sign-up walls and "premium" upsells</div><div class="vs-cell"><i class="ok" data-lucide="check"></i>no accounts, no tiers, no paywall</div></div>
+    <div class="vs-row"><div class="vs-cell"><i class="x" data-lucide="x"></i>redirect mazes to sketchy mirrors</div><div class="vs-cell"><i class="ok" data-lucide="check"></i>your file, first tap, every time</div></div>
+  </div>
+</section>
+
+<!-- ================= MENU ================= -->
+<section class="sec" id="menu" style="padding-top:20px">
+  <div class="sec-head rv">
+    <div><div class="sec-num">03 — THE MENU</div>
+      <h2 class="sec-title">What's on the menu</h2></div>
+    <div class="sec-note">Everything served free, forever</div>
+  </div>
+  <div class="menu-row menu-head rv">
+    <span></span><span>Source</span><span>Extracts</span><span>Max quality</span>
+    <span class="m-hide">Audio</span><span class="m-price" style="text-align:right">Price</span>
+  </div>
+  <div class="menu-row rv" data-cursor="RIP"><span class="dot"></span>
+    <span class="m-name"><i class="m-ic" data-lucide="instagram"></i>Instagram Reels</span>
+    <span class="m-cell">video + audio</span><span class="m-cell">1080p</span>
+    <span class="m-cell m-hide">MP3 ok</span><span class="m-price">FREE</span></div>
+  <div class="menu-row rv" data-cursor="RIP"><span class="dot"></span>
+    <span class="m-name"><i class="m-ic" data-lucide="instagram"></i>Instagram Video</span>
+    <span class="m-cell">video + audio</span><span class="m-cell">1080p</span>
+    <span class="m-cell m-hide">MP3 ok</span><span class="m-price">FREE</span></div>
+  <div class="menu-row rv" data-cursor="RIP"><span class="dot"></span>
+    <span class="m-name"><i class="m-ic" data-lucide="youtube"></i>YouTube Video</span>
+    <span class="m-cell">video + audio</span><span class="m-cell">1080p60</span>
+    <span class="m-cell m-hide">MP3 ok</span><span class="m-price">FREE</span></div>
+  <div class="menu-row rv" data-cursor="RIP"><span class="dot"></span>
+    <span class="m-name"><i class="m-ic" data-lucide="youtube"></i>YouTube Shorts</span>
+    <span class="m-cell">vertical video</span><span class="m-cell">1080p</span>
+    <span class="m-cell m-hide">MP3 ok</span><span class="m-price">FREE</span></div>
+  <div class="menu-row rv" data-cursor="RIP"><span class="dot"></span>
+    <span class="m-name"><i class="m-ic" data-lucide="music"></i>YouTube Music</span>
+    <span class="m-cell">audio only</span><span class="m-cell">—</span>
+    <span class="m-cell m-hide">320kbps</span><span class="m-price">FREE</span></div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="sec" id="faq" style="padding-top:20px">
+  <div class="sec-head rv">
+    <div><div class="sec-num">04 — FAQ</div>
+      <h2 class="sec-title">Straight answers</h2></div>
+    <div class="sec-note">No fine print, no marketing fog</div>
+  </div>
+
+  <div class="faq-item rv"><button class="faq-q" aria-expanded="false"><span>Why the name "ripr."?</span><i data-lucide="plus"></i></button>
+    <div class="faq-a"><div><p>Because that's exactly what it does — you <b>rip</b> the media out of the feed and keep it. Verb, two syllables, no explanation needed. The dot is the period at the end of the argument.</p></div></div></div>
+
+  <div class="faq-item rv"><button class="faq-q" aria-expanded="false"><span>Does this really download the file?</span><i data-lucide="plus"></i></button>
+    <div class="faq-a"><div><p>The page you're on is the complete front-end. Browsers alone can't pull streams from YouTube or Instagram — ripr. ships with a tiny companion server (<b>server.py</b>, powered by the open-source yt-dlp engine). Run it on your machine and connect once with <b>?api=http://localhost:8000</b> — the badge flips to <b>SERVER LIVE</b> and every rip becomes a real file with real progress. Without it, everything runs in honest demo mode.</p></div></div></div>
+
+  <div class="faq-item rv"><button class="faq-q" aria-expanded="false"><span>Is downloading videos even legal?</span><i data-lucide="plus"></i></button>
+    <div class="faq-a"><div><p>Personal, offline use is treated differently around the world — and both platforms' terms have opinions about it. Re-uploading or monetising someone else's work is never okay. Respect creators; don't be that person.</p></div></div></div>
+
+  <div class="faq-item rv"><button class="faq-q" aria-expanded="false"><span>Can I install it like an app?</span><i data-lucide="plus"></i></button>
+    <div class="faq-a"><div><p>Yes — ripr. is a PWA. On any HTTPS host your browser will offer "Install". On Android you can even share a reel straight from Instagram's share sheet and ripr. opens with the link already loaded. Scan the QR code (top-right) to open it on your phone instantly.</p></div></div></div>
+
+  <div class="faq-item rv"><button class="faq-q" aria-expanded="false"><span>Why is it so fast?</span><i data-lucide="plus"></i></button>
+    <div class="faq-a"><div><p>No ad networks, no trackers, no redirect mazes. One HTML file, two fonts, zero frameworks. Your link goes in, the file comes out — that's the entire business model, because there isn't one.</p></div></div></div>
+</section>
+
+<!-- ================= OWNER CONSOLE (hidden until unlocked) ================= -->
+<section class="sec" id="console" hidden>
+  <div class="sec-head rv in">
+    <div><div class="sec-num">05 — OWNER'S CONSOLE</div>
+      <h2 class="sec-title">Who's been here</h2></div>
+    <div class="sec-note" id="conSrc">DATA SOURCE: LOCAL BROWSER</div>
+  </div>
+
+  <div class="con-grid">
+    <div>
+      <div class="con-lab"><span class="live-dot"></span>Current session — live</div>
+      <div class="c-timer" id="cTimer">00:00<small> ON SITE</small></div>
+      <div class="kv"><span>Arrived at</span><b id="cIn">—</b></div>
+      <div class="kv"><span>Date</span><b id="cDate">—</b></div>
+      <div class="kv"><span>Device</span><b id="cDev">—</b></div>
+      <div class="kv"><span>Browser / OS</span><b id="cEnv">—</b></div>
+      <div class="kv"><span>Screen</span><b id="cScr">—</b></div>
+      <div class="kv"><span>Language / TZ</span><b id="cLang">—</b></div>
+      <div class="kv"><span>Referrer</span><b id="cRef">—</b></div>
+      <div class="kv"><span>Scroll depth</span><b id="cScroll">0%</b></div>
+      <div class="kv"><span>Rips this visit</span><b id="cGrabs">0</b></div>
+    </div>
+
+    <div>
+      <div class="con-lab"><i data-lucide="database"></i>Lifetime totals</div>
+      <div class="totals">
+        <div class="tot"><small>Total visits</small><b id="tVisits">0</b></div>
+        <div class="tot"><small>Time on site</small><b id="tTime">0<i>s</i></b></div>
+        <div class="tot"><small>Avg session</small><b id="tAvg">0<i>s</i></b></div>
+        <div class="tot"><small>Total rips</small><b id="tGrabs">0</b></div>
+      </div>
+      <div class="con-btns">
+        <button class="cbtn fill" id="csvBtn" data-hover><i data-lucide="download"></i>Export CSV</button>
+        <button class="cbtn ghost warn" id="clrBtn" data-hover><i data-lucide="trash-2"></i>Clear log</button>
+        <button class="cbtn ghost" id="passBtn" data-hover><i data-lucide="key-round"></i>Change passphrase</button>
+        <button class="cbtn ghost" id="lockBtn" data-hover><i data-lucide="log-out"></i>Lock console</button>
+      </div>
+      <p class="con-foot">Owner note: in DEMO mode the log lives in this browser's localStorage and the passphrase is a curtain, not a vault — fine for testing. Connect a running <b>server.py</b> (<b>?api=…</b>) with a strong <b>RIPR_KEY</b> and the same passphrase is verified server-side: that's the real lock, and the log covers every visitor on every device.</p>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>In at</th><th>Duration</th><th>Device</th><th>Browser</th><th>OS</th><th>Screen</th><th>Rips</th><th>Scroll</th><th>Last rip</th></tr></thead>
+      <tbody id="visBody"></tbody>
+    </table>
+  </div>
+</section>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="f-mark">ripr.</div>
+  <div class="f-row">
+    <div>
+      <div class="f-cred">
+        <b>ripr. v3.0</b> — designed &amp; coded by <b>PUNEETH ACHARYA</b><br>
+        plain HTML / CSS / JS + a tiny flask server · zero frameworks · zero ads<br>
+        <span style="opacity:.55">paste. rip. keep.</span>
+      </div>
+      <a class="folio" href="https://puneethacharya71.github.io/portfolio/" target="_blank" rel="noopener" data-hover>
+        <i data-lucide="arrow-up-right"></i>View my portfolio</a>
+      <button class="folio" id="qrBtn2" data-hover><i data-lucide="qr-code"></i>Scan to open on your phone</button>
+    </div>
+    <button class="top-btn" id="topBtn" data-hover aria-label="back to top"><i data-lucide="arrow-up"></i></button>
+  </div>
+</footer>
+
+<!-- ================= OWNER GATE ================= -->
+<div class="modal-back" id="gateBack" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="g-kicker mono"><i data-lucide="key-round"></i>OWNER ACCESS</div>
+    <h3 id="gateTitle">Enter passphrase</h3>
+    <p class="g-sub" id="gateSub"></p>
+    <input type="password" id="gatePass" placeholder="passphrase" autocomplete="off">
+    <div class="g-actions">
+      <button class="cbtn ghost" id="gateCancel" data-hover>Cancel</button>
+      <button class="cbtn fill" id="gateGo" data-hover>Unlock</button>
+    </div>
+    <div class="g-err" id="gateErr"></div>
+  </div>
+</div>
+
+<!-- ================= QR SHARE ================= -->
+<div class="modal-back" id="qrBack" hidden>
+  <div class="modal qr-modal" role="dialog" aria-modal="true" aria-label="QR code">
+    <div class="g-kicker mono"><i data-lucide="qr-code"></i>SCAN &amp; OPEN</div>
+    <h3>Point a phone camera here</h3>
+    <div class="qr-tabs">
+      <button class="pill qr-tab on" data-mode="site" data-hover>This site</button>
+      <button class="pill qr-tab" data-mode="link" id="qrLinkTab" data-hover>This video link</button>
+    </div>
+    <div class="qr-stage">
+      <canvas id="qrCanvas" width="10" height="10"></canvas>
+      <div class="qr-fallback" id="qrFallback" hidden>
+        QR engine didn't load (first visit while offline?).<br>Reconnect once — after that it works offline forever.
+      </div>
+    </div>
+    <div class="qr-url mono" id="qrUrl">—</div>
+    <div class="g-actions">
+      <button class="cbtn ghost" id="qrClose" data-hover>Close</button>
+      <button class="cbtn ghost" id="qrCopy" data-hover>Copy link</button>
+      <button class="cbtn fill" id="qrPng" data-hover><i data-lucide="download"></i>PNG</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+/* ============================================================
+   ripr. v3.0 — by Puneeth Acharya
+   Fully local front-end. Deployable on GitHub Pages as-is.
+   Optionally connects to server.py (any origin) via ?api=URL
+   ============================================================ */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* API base — same-origin by default; override once with ?api=http://localhost:8000
+   disconnect with ?api=0. Saved in localStorage so it survives reloads. */
+const API=(()=>{ const p=new URLSearchParams(location.search).get('api');
+  if(p==='0'){ localStorage.removeItem('ripr_api'); return ''; }
+  if(p){ const v=p.replace(/\/+$/,'')+'/'; localStorage.setItem('ripr_api',v); return v; }
+  return localStorage.getItem('ripr_api')||''; })();
+
+/* ---------- helpers ---------- */
+const pad = n => String(n).padStart(2,'0');
+function fmtDur(s){ s=Math.floor(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return (h? h+':'+pad(m) : m)+':'+pad(x); }
+function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0).toString(16); }
+async function sha(s){
+  try{ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }catch(e){ return 'fnv:'+hashStr(s); }
+}
+function rng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0;
+  let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296; }; }
+function toast(msg, icon='info'){
+  const t=document.createElement('div'); t.className='toast';
+  t.innerHTML=`<i data-lucide="${icon}"></i><span>${msg}</span>`;
+  $('#toasts').appendChild(t); lucide.createIcons();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),450); }, 4200);
+}
+function saveBlob(blob, name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ============================================================
+   ANALYTICS ENGINE — local always, mirrored to server if LIVE
+   ============================================================ */
+const KEY='ripr_visits_v3', OWNER_KEY_FILE='ripr_owner_hash';
+let MODE='demo', ownerKey=sessionStorage.getItem('ripr_owner_key')||null;
+
+function parseUA(ua){
+  const b = /Edg\//.test(ua)?'Edge' : /OPR\//.test(ua)?'Opera' : /Chrome\//.test(ua)?'Chrome'
+          : /Safari\//.test(ua)?'Safari' : /Firefox\//.test(ua)?'Firefox':'Other';
+  const o = /Windows/.test(ua)?'Windows' : /Android/.test(ua)?'Android'
+          : /iPhone|iPad|iPod/.test(ua)?'iOS' : /CrOS/.test(ua)?'ChromeOS'
+          : /Mac OS X/.test(ua)?'macOS' : /Linux/.test(ua)?'Linux':'Other';
+  const d = /iPad|Tablet/.test(ua)?'Tablet' : /Mobi|Android/.test(ua)?'Mobile':'Desktop';
+  return {b,o,d};
+}
+let visits=[];
+try{ visits=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ visits=[]; }
+
+const env=parseUA(navigator.userAgent);
+const session={
+  id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+  t0: Date.now(), dur:0, grabs:0, scroll:0, plat:'-',
+  date:new Date().toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short'}),
+  tin:new Date().toLocaleTimeString(undefined,{hour12:false}),
+  browser:env.b, os:env.o, device:env.d,
+  screen:`${screen.width}x${screen.height}`,
+  lang:navigator.language||'-',
+  tz:String(-new Date().getTimezoneOffset()/60),
+  ref:(document.referrer||'direct').replace(/^https?:\/\//,'').slice(0,40)
+};
+visits.push(session);
+if(visits.length>80) visits=visits.slice(-80);
+function saveVisits(){ try{ localStorage.setItem(KEY, JSON.stringify(visits)); }catch(e){} }
+saveVisits();
+
+function logToServer(){
+  if(MODE!=='live') return;
+  fetch(API+'api/log',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(session),keepalive:true}).catch(()=>{});
+}
+let maxScroll=0;
+addEventListener('scroll', ()=>{
+  const h=document.documentElement;
+  const p=h.scrollTop/Math.max(1,h.scrollHeight-h.clientHeight);
+  maxScroll=Math.max(maxScroll,p); session.scroll=Math.round(maxScroll*100);
+  $('#sprog').style.transform=`scaleX(${p})`;
+  $('#hdr').classList.toggle('solid', h.scrollTop>40);
+},{passive:true});
+
+setInterval(()=>{
+  session.dur=(Date.now()-session.t0)/1000;
+  const s=fmtDur(session.dur);
+  $('#cTimer').innerHTML=s+'<small> ON SITE</small>';
+  $('#mSession').textContent=s;
+  $('#cScroll').textContent=session.scroll+'%';
+  $('#cGrabs').textContent=session.grabs;
+  $('#mGrabs').textContent=session.grabs;
+  document.title=`ripr. · ${s}`;
+},1000);
+setInterval(saveVisits,2000);
+setInterval(logToServer,15000);
+addEventListener('pagehide',()=>{ saveVisits();
+  if(MODE==='live' && navigator.sendBeacon)
+    navigator.sendBeacon(API+'api/log', new Blob([JSON.stringify(session)],{type:'application/json'}));
+});
+
+async function getVisits(){
+  if(MODE==='live' && ownerKey){
+    try{
+      const r=await fetch(API+'api/visits',{headers:{'X-Admin-Key':ownerKey}});
+      if(r.ok) return {rows:await r.json(), src:'SERVER'};
+    }catch(e){}
+  }
+  return {rows:visits, src:'LOCAL BROWSER'};
+}
+async function renderConsole(){
+  const {rows,src}=await getVisits();
+  $('#conSrc').textContent='DATA SOURCE: '+src;
+  $('#tVisits').textContent=rows.length;
+  const tot=rows.reduce((a,v)=>a+(+v.dur||0),0);
+  $('#tTime').innerHTML=Math.round(tot)+'<i>s</i>';
+  $('#tAvg').innerHTML=(rows.length?Math.round(tot/rows.length):0)+'<i>s</i>';
+  $('#tGrabs').textContent=rows.reduce((a,v)=>a+(+v.grabs||0),0);
+  const body=$('#visBody');
+  if(!rows.length){ body.innerHTML=`<tr><td colspan="11" class="empty">no visits recorded yet</td></tr>`; return; }
+  body.innerHTML=rows.slice().reverse().map((v,i)=>`
+    <tr class="${v.id===session.id?'me':''}">
+      <td>${i+1}</td><td>${esc(v.date)}</td><td>${esc(v.tin)}</td><td>${fmtDur(+v.dur||0)}</td>
+      <td>${esc(v.device)}</td><td>${esc(v.browser)}</td><td>${esc(v.os)}</td><td>${esc(v.screen)}</td>
+      <td>${+v.grabs||0}</td><td>${+v.scroll||0}%</td><td>${esc(v.plat||'-')}</td>
+    </tr>`).join('');
+}
+function fillSessionPanel(){
+  $('#cIn').textContent=session.tin;
+  $('#cDate').textContent=session.date;
+  $('#cDev').textContent=session.device;
+  $('#cEnv').textContent=`${session.browser} / ${session.os}`;
+  $('#cScr').textContent=session.screen;
+  $('#cLang').textContent=`${session.lang} · UTC${+session.tz>=0?'+':''}${session.tz}`;
+  $('#cRef').textContent=session.ref;
+}
+fillSessionPanel();
+
+/* CSV export — a real file */
+ $('#csvBtn').addEventListener('click', async ()=>{
+  const {rows}=await getVisits();
+  const head=['#','date','in_at','duration_s','device','os','browser','screen','lang','tz','rips','scroll_pct','referrer','last_platform'];
+  const out=rows.slice().reverse().map((v,i)=>[i+1,v.date,v.tin,Math.round(+v.dur||0),v.device,v.os,v.browser,v.screen,v.lang,v.tz,+v.grabs||0,+v.scroll||0,v.ref,v.plat||'-']);
+  const csv=[head,...out].map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  saveBlob(new Blob([csv],{type:'text/csv'}),'ripr-visits.csv');
+  toast('ripr-visits.csv exported','check');
+});
+
+/* clear (two-step) + lock + change pass */
+let clrArmed=false;
+ $('#clrBtn').addEventListener('click', function(){
+  if(!clrArmed){ clrArmed=true; this.innerHTML='<i data-lucide="trash-2"></i>Sure? click again';
+    lucide.createIcons(); setTimeout(()=>{clrArmed=false;
+      this.innerHTML='<i data-lucide="trash-2"></i>Clear log'; lucide.createIcons();},2600); return; }
+  clrArmed=false; this.innerHTML='<i data-lucide="trash-2"></i>Clear log'; lucide.createIcons();
+  visits=visits.filter(v=>v.id===session.id); saveVisits(); renderConsole();
+  toast('Local log cleared — current session kept','trash-2');
+});
+ $('#lockBtn').addEventListener('click', ()=>lockConsole(true));
+ $('#ownerTag').addEventListener('click', function(){
+  if(!this.dataset.armed){ this.dataset.armed='1'; this.style.outline='2px dashed var(--ink)';
+    setTimeout(()=>{delete this.dataset.armed; this.style.outline='';},2500); return; }
+  delete this.dataset.armed; this.style.outline=''; lockConsole(false);
+});
+function lockConsole(showToast){
+  document.body.classList.remove('owner');
+  sessionStorage.removeItem('ripr_owner_key'); ownerKey=null;
+  $('#console').hidden=true;
+  if(showToast) toast('Console locked. Type "admin" to reopen.','lock');
+}
+
+/* clocks */
+setInterval(()=>{ const t=new Date().toLocaleTimeString(undefined,{hour12:false});
+  $('#hClock').textContent=t; $('#mClock').textContent=t; },1000);
+
+/* ============================================================
+   OWNER GATE — hidden console, typed "admin" or #owner to open
+   ============================================================ */
+const gateBack=$('#gateBack'), gatePass=$('#gatePass');
+let gateMode='unlock';
+function gateSpec(){
+  if(MODE==='live')            return {title:'Server key required',
+    sub:'Type the RIPR_KEY set on your ripr. server (env variable). It is verified server-side — the real lock.'};
+  if(!localStorage.getItem(OWNER_KEY_FILE)) return {title:'Set your passphrase',
+    sub:'First run on this browser. This passphrase guards the console here; its hash is stored locally. On a connected server, use RIPR_KEY instead — that check happens off-device.'};
+  return {title:'Enter passphrase',
+    sub:'This browser\u2019s console is locked. Only the passphrase opens it.'};
+}
+function openGate(forceMode){
+  const s=gateSpec();
+  gateMode = forceMode || (MODE==='live' ? 'server'
+    : (localStorage.getItem(OWNER_KEY_FILE) ? 'unlock' : 'set'));
+  $('#gateTitle').textContent = forceMode==='change' ? 'New passphrase' : s.title;
+  $('#gateSub').textContent   = forceMode==='change'
+    ? 'Replace the stored hash with a new passphrase. Old one stops working immediately.'
+    : s.sub;
+  $('#gateErr').textContent=''; gatePass.value='';
+  gateBack.hidden=false; setTimeout(()=>gatePass.focus(),50);
+}
+function closeGate(){ gateBack.hidden=true; }
+ $('#gateCancel').addEventListener('click', closeGate);
+gateBack.addEventListener('click', e=>{ if(e.target===gateBack) closeGate(); });
+addEventListener('keydown', e=>{ if(e.key==='Escape' && !gateBack.hidden) closeGate(); });
+
+async function tryGate(){
+  const p=gatePass.value;
+  function fail(m){ $('#gateErr').textContent=m;
+    const mo=gateBack.querySelector('.modal'); mo.classList.remove('shake'); void mo.offsetWidth; mo.classList.add('shake'); }
+  if(!p) return fail('Type something first.');
+  if(gateMode==='set' || gateMode==='change'){
+    localStorage.setItem(OWNER_KEY_FILE, await sha(p));
+    closeGate(); unlockConsole(); toast('Passphrase set — console unlocked','key-round'); return;
+  }
+  if(MODE==='live'){
+    try{
+      const r=await fetch(API+'api/visits',{headers:{'X-Admin-Key':p}});
+      if(r.ok){ ownerKey=p; sessionStorage.setItem('ripr_owner_key',p);
+        closeGate(); unlockConsole(); toast('Server verified — full visitor log loaded','shield-check'); return; }
+      return fail('Server rejected that key.');
+    }catch(e){ return fail('Server unreachable.'); }
+  }
+  if((await sha(p))===localStorage.getItem(OWNER_KEY_FILE)){
+    closeGate(); unlockConsole(); toast('Welcome back, owner','key-round');
+  } else fail('Wrong passphrase.');
+}
+ $('#gateGo').addEventListener('click', tryGate);
+gatePass.addEventListener('keydown', e=>{ if(e.key==='Enter') tryGate(); });
+
+function unlockConsole(){
+  document.body.classList.add('owner');
+  $('#console').hidden=false;
+  fillSessionPanel(); renderConsole();
+}
+ $('#passBtn').addEventListener('click', ()=>openGate('change'));
+
+/* typed "admin" (ignored while typing in fields) */
+let kbuf='';
+addEventListener('keydown', e=>{
+  if(/input|textarea|select/i.test(e.target.tagName) || !gateBack.hidden) return;
+  kbuf=(kbuf+(e.key||'')).toLowerCase().slice(-9);
+  if(kbuf.endsWith('admin')){ kbuf=''; openGate(); }
+});
+if(location.hash==='#owner') addEventListener('load', ()=>openGate());
+
+/* ============================================================
+   PRELOADER
+   ============================================================ */
+(function loader(){
+  const num=$('#ldNum'), bar=$('#ldBar');
+  function done(){
+    document.body.classList.remove('loading'); document.body.classList.add('ready');
+    $('#loader').classList.add('done'); $('#shutter').classList.add('done');
+    setTimeout(()=>{ $('#loader')?.remove(); $('#shutter')?.remove(); },1000);
+  }
+  if(reduced){ num.textContent='100'; bar.style.transform='scaleX(1)'; return done(); }
+  const t0=performance.now();
+  (function step(t){
+    const k=Math.min(1,(t-t0)/1400);
+    const p=Math.min(100, 100*(1-Math.pow(1-k,3)) + Math.random()*2*(1-k));
+    if(p>=99.6){ num.textContent='100'; bar.style.transform='scaleX(1)'; setTimeout(done,180); return; }
+    num.textContent=pad(Math.floor(p));
+    bar.style.transform=`scaleX(${p/100})`;
+    requestAnimationFrame(step);
+  })(t0);
+})();
+
+/* ============================================================
+   CUSTOM CURSOR (fine pointers only)
+   ============================================================ */
+if(matchMedia('(hover:hover) and (pointer:fine)').matches && !reduced){
+  document.body.classList.add('has-cursor');
+  const dot=$('#cDot'), ring=$('#cRing'), ringIn=ring.firstElementChild, lab=$('#cLab');
+  let x=innerWidth/2,y=innerHeight/2,rx=x,ry=y;
+  addEventListener('mousemove',e=>{ x=e.clientX; y=e.clientY;
+    dot.style.transform=`translate(${x}px,${y}px)`;
+    dot.style.opacity=ring.style.opacity=1; });
+  (function loop(){ rx+=(x-rx)*.16; ry+=(y-ry)*.16;
+    ring.style.transform=`translate(${rx}px,${ry}px)`; requestAnimationFrame(loop); })();
+  document.addEventListener('mouseover',e=>{
+    const hov=e.target.closest('a,button,[data-hover],input,textarea,.chip,.pill');
+    ringIn.classList.toggle('grow',!!hov);
+    const c=e.target.closest('[data-cursor]');
+    if(c){ ringIn.classList.add('rip'); lab.textContent=c.dataset.cursor; }
+    else { ringIn.classList.remove('rip'); lab.textContent=''; }
+  });
+  document.addEventListener('mousedown',()=>ringIn.classList.add('down'));
+  document.addEventListener('mouseup',()=>ringIn.classList.remove('down'));
+  document.documentElement.addEventListener('mouseleave',()=>{ dot.style.opacity=ring.style.opacity=0; });
+}
+
+/* ============================================================
+   REVEALS + MARQUEE + ICONS
+   ============================================================ */
+lucide.createIcons();
+const mq=$('#mqTrack'); mq.appendChild(mq.firstElementChild.cloneNode(true));
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}),{threshold:.15});
+ $$('.rv').forEach(el=>io.observe(el));
+
+/* ============================================================
+   PWA — runtime manifest + share target + install button + SW
+   ============================================================ */
+(function pwa(){
+  try{
+    const c=document.createElement('canvas'); c.width=c.height=512;
+    const g=c.getContext('2d');
+    g.fillStyle='#17150E'; g.fillRect(0,0,512,512);
+    g.fillStyle='#FF4D00'; g.fillRect(48,48,416,416);
+    g.fillStyle='#17150E'; g.font='800 300px sans-serif';
+    g.textBaseline='middle'; g.textAlign='center'; g.fillText('r.',256,286);
+    const icon=c.toDataURL('image/png');
+    const manifest={
+      name:'ripr. — paste. rip. keep.', short_name:'ripr.',
+      display:'standalone', background_color:'#17150E', theme_color:'#17150E',
+      start_url:location.pathname, scope:'./',
+      share_target:{action:location.pathname, method:'GET',
+        params:{title:'title', text:'text', url:'url'}},
+      icons:[{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]
+    };
+    const link=document.createElement('link'); link.rel='manifest';
+    link.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}));
+    document.head.appendChild(link);
+  }catch(e){}
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  let deferred=null;
+  addEventListener('beforeinstallprompt', e=>{
+    e.preventDefault(); deferred=e; $('#installBtn').classList.add('show');
+  });
+  $('#installBtn').addEventListener('click', async ()=>{
+    if(!deferred) return;
+    deferred.prompt(); await deferred.userChoice;
+    deferred=null; $('#installBtn').classList.remove('show');
+    toast('ripr. installed — check your home screen','check');
+  });
+})();
+
+/* ============================================================
+   DETECTION + PLATFORM DATA
+   ============================================================ */
+const PLATFORMS={
+  reel:   {label:'INSTAGRAM REEL', short:'IG REEL', bit:[15,90]},
+  insta:  {label:'INSTAGRAM VIDEO',short:'IG VID',  bit:[30,300]},
+  youtube:{label:'YOUTUBE VIDEO',  short:'YT',      bit:[60,600]},
+  shorts: {label:'YOUTUBE SHORTS', short:'SHORT',   bit:[15,90]},
+  ytmusic:{label:'YT MUSIC',       short:'MUSIC',   bit:[120,300]}
+};
+const BR={video:{1080:5200,720:2600,480:1300,360:750}, audio:{320:320,128:128}};
+function estMB(kind,q,dur){ return (BR[kind][q]||500)*1000*dur/8/1e6; }
+
+function detect(raw){
+  let u; try{ u=new URL(raw.trim().startsWith('http')?raw.trim():'https://'+raw.trim()); }catch(e){ return null; }
+  const host=u.hostname;
+  if(/(^|\.)instagram\.com$/.test(host)){
+    let m=u.pathname.match(/\/(?:reel|reels)\/([\w-]+)/);
+    if(m) return {plat:'reel', id:m[1]};
+    m=u.pathname.match(/\/(?:p|tv)\/([\w-]+)/);
+    if(m) return {plat:'insta', id:m[1]};
+    return null;
+  }
+  if(/(^|\.)(youtube\.com|youtu\.be)$/.test(host)){
+    let m=u.pathname.match(/\/shorts\/([\w-]+)/);
+    if(m) return {plat:'shorts', id:m[1]};
+    if(host==='youtu.be') return {plat:'youtube', id:u.pathname.slice(1)};
+    if(host.startsWith('music.')){
+      const v=u.searchParams.get('v');
+      return v? {plat:'ytmusic', id:v} : null;
+    }
+    const v=u.searchParams.get('v');
+    return v? {plat:'youtube', id:v} : null;
+  }
+  return null;
+}
+function setChips(d){ $$('.chip').forEach(c=>c.classList.toggle('on', !!d && c.dataset.p===d.plat)); }
+
+/* ============================================================
+   HEALTH CHECK — flip to LIVE when server.py is reachable
+   ============================================================ */
+(async function health(){
+  try{
+    const r=await fetch(API+'api/health',{cache:'no-store'});
+    if(r.ok){ const j=await r.json();
+      if(j && j.service==='ripr'){
+        MODE='live';
+        $('#modeK').textContent='SERVER LIVE'; $('#mMode').textContent='LIVE';
+        toast('ripr. server detected — real rips enabled','server');
+      }}
+  }catch(e){}
+})();
+
+/* ============================================================
+   THE GRAB FLOW
+   ============================================================ */
+const urlIn=$('#url'), ripBtn=$('#ripBtn'), stage=$('#stage');
+let busy=false, sel=null, curUrl='';
+
+const sleep=ms=>new Promise(r=>setTimeout(r, reduced?0:ms));
+function makeLog(){
+  const el=document.createElement('div'); el.className='riplog'; stage.innerHTML=''; stage.appendChild(el);
+  return {
+    line(html){ const cur=el.querySelector('.carline'); if(cur) cur.remove();
+      const d=document.createElement('div'); d.innerHTML=html;
+      [...d.childNodes].forEach(x=>el.appendChild(x)); },
+    cursor(html){ const cur=el.querySelector('.carline'); if(cur) cur.remove();
+      const d=document.createElement('div'); d.className='carline';
+      d.innerHTML=html+' <span class="car"></span>'; el.appendChild(d); }
+  };
+}
+
+/* chips, paste, shortcuts */
+ $$('.chip').forEach(c=>c.addEventListener('click',()=>{ urlIn.value=c.dataset.sample; setChips(detect(urlIn.value)); grab(); }));
+ $('#sticker').addEventListener('click',()=>{ urlIn.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>urlIn.focus(),500); });
+ $('#pasteBtn').addEventListener('click',async()=>{
+  try{ const t=await navigator.clipboard.readText();
+    if(t){ urlIn.value=t.trim(); setChips(detect(t)); grab(); return; }
+    toast('Clipboard came back empty — paste manually','clipboard');
+  }catch(e){ toast('Clipboard blocked by browser — press Ctrl+V in the bar','clipboard'); urlIn.focus(); }
+});
+document.addEventListener('paste',e=>{
+  if(/input|textarea/i.test(document.activeElement.tagName) || busy) return;
+  const t=(e.clipboardData||window.clipboardData).getData('text').trim();
+  const m=t.match(/https?:\/\/\S+/);
+  if(m && detect(m[0])){ urlIn.value=m[0]; setChips(detect(m[0])); grab(); toast('Link caught mid-air — ripping','zap'); }
+});
+urlIn.addEventListener('keydown',e=>{ if(e.key==='Enter') grab(); });
+urlIn.addEventListener('input',()=>setChips(detect(urlIn.value)));
+ripBtn.addEventListener('click',grab);
+
+/* shared download engine — live streams real bytes, demo animates */
+async function doRip({url, opt, meta, prog, label}){
+  if(MODE==='live'){
+    try{
+      const res=await fetch(API+'api/rip',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({url, kind:opt.kind, q:opt.q})});
+      if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j.error||('HTTP '+res.status)); }
+      const total=+(res.headers.get('X-Rip-Size')||0);
+      const reader=res.body.getReader(); const chunks=[]; let got=0; const t0=performance.now();
+      while(true){
+        const {done,value}=await reader.read(); if(done) break;
+        chunks.push(value); got+=value.length;
+        const sp=got/Math.max(.001,(performance.now()-t0)/1000)/1e6;
+        if(label) label(`Ripping… ${(got/1e6).toFixed(1)} MB · ${sp.toFixed(1)} MB/s${total? ' · '+Math.round(got/total*100)+'%':''}`);
+        if(prog) prog(total? got/total*100 : Math.min(92, got/6e5));
+      }
+      const blob=new Blob(chunks);
+      const cd=res.headers.get('Content-Disposition')||'';
+      const m=cd.match(/filename="?([^"]+)"?/);
+      saveBlob(blob, m? m[1] : `ripr-${Date.now()}.${opt.kind==='audio'?'mp3':'mp4'}`);
+      return {ok:true, mb:blob.size/1e6};
+    }catch(e){ return {ok:false, err:e.message||'rip failed'}; }
+  }
+  /* demo animation */
+  const total=(meta.opts.find(o=>o.kind===opt.kind&&o.q==opt.q)||{}).mb || 20;
+  const durMs=Math.min(2600, 1200+total*4); const t0=performance.now();
+  await new Promise(res=>{ (function anim(t){
+    const k=Math.min(1,(t-t0)/durMs);
+    const sp=k>0.02? total*k/((t-t0)/1000):0;
+    if(prog) prog(k*100);
+    if(label) label(`Ripping… ${Math.round(k*100)}% · ${sp.toFixed(1)} MB/s`);
+    k<1? requestAnimationFrame(anim) : res();
+  })(t0); });
+  return {ok:true, mb:total};
+}
+
+function countGrab(plat){
+  session.grabs++; session.plat=plat; saveVisits(); logToServer();
+  if(document.body.classList.contains('owner')) renderConsole();
+}
+
+/* ---------- single link ---------- */
+async function grab(){
+  if(busy) return;
+  const d=detect(urlIn.value);
+  if(!d){
+    const g=$('#grabber'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake');
+    toast('That does not look like an Instagram or YouTube link','alert-triangle'); return;
+  }
+  busy=true; curUrl=urlIn.value.trim();
+  ripBtn.disabled=true; ripBtn.innerHTML='<i data-lucide="loader"></i><span>Reading…</span>'; lucide.createIcons();
+  setChips(d);
+  const P=PLATFORMS[d.plat];
+  const log=makeLog();
+  let host=''; try{ host=new URL(curUrl.startsWith('http')?curUrl:'https://'+curUrl).hostname; }catch(e){}
+  log.line(`&gt; resolving host……… <span class="a">${esc(host)}</span>`);
+  log.line(`&gt; platform identified : <span class="a">${P.label}</span>`);
+  log.cursor(`&gt; reading metadata…`);
+
+  let meta;
+  if(MODE==='live'){
+    try{
+      const r=await fetch(API+'api/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:curUrl})});
+      const j=await r.json();
+      if(!r.ok) throw new Error(j.error||'info failed');
+      meta=liveMeta(j,d);
+    }catch(e){
+      log.line(`&gt; <span class="a">error:</span> ${esc(e.message)}`);
+      busy=false; ripBtn.disabled=false; ripBtn.innerHTML='<i data-lucide="zap"></i><span>Rip it</span>'; lucide.createIcons();
+      toast('Server could not read that link: '+e.message,'alert-triangle'); return;
+    }
+  }else{
+    await sleep(500);
+    meta=demoMeta(d);
+  }
+  log.line(`&gt; metadata ok — <span class="a">${esc((meta.title||'').slice(0,46))}</span> · ${fmtDur(meta.dur)}`);
+  log.line(`&gt; <span class="a">done.</span> pick your flavor ↓`);
+  buildResult(d, meta);
+  busy=false; ripBtn.disabled=false; ripBtn.innerHTML='<i data-lucide="zap"></i><span>Rip it</span>'; lucide.createIcons();
+}
+
+function demoMeta(d){
+  const r=rng(hashStr(curUrl+d.id));
+  const [lo,hi]=PLATFORMS[d.plat].bit;
+  const dur=Math.round(lo+r()*(hi-lo));
+  const opts=[];
+  if(d.plat!=='ytmusic') [1080,720,480,360].forEach(q=>opts.push({kind:'video',q,label:q+'p',mb:estMB('video',q,dur)}));
+  [320,128].forEach(q=>opts.push({kind:'audio',q,label:'MP3 '+q,mb:estMB('audio',q,dur)}));
+  const seed=hashStr(d.id||curUrl).toString(36);
+  return {title:`${PLATFORMS[d.plat].label.toLowerCase().replace(/\s/g,'_')}_${d.id||'file'}`,
+    sub:`id ${d.id||'—'} · demo parse · nothing uploaded`,
+    dur, thumb:`https://picsum.photos/seed/${seed}/640/360.jpg`, opts, by:'ripr. demo engine'};
+}
+function liveMeta(j,d){
+  const dur=j.duration||0; const opts=[];
+  const vh=[...new Set((j.formats||[]).filter(f=>f.kind==='video').map(f=>+f.q))].sort((a,b)=>b-a).slice(0,4);
+  (vh.length?vh:[1080,720,480,360]).forEach(q=>opts.push({kind:'video',q,label:q+'p',mb:estMB('video',q,dur)}));
+  const ah=[...new Set((j.formats||[]).filter(f=>f.kind==='audio').map(f=>Math.round(+f.q)))].sort((a,b)=>b-a).slice(0,2);
+  (ah.length?ah:[320,128]).forEach(q=>opts.push({kind:'audio',q,label:'MP3 '+q,mb:estMB('audio',q>=192?320:128,dur)}));
+  return {title:j.title||PLATFORMS[d.plat].label, sub:`${j.uploader||''} · via yt-dlp engine`,
+    dur, thumb:j.thumbnail, opts, by:j.extractor||'yt-dlp'};
+}
+
+function buildResult(d, meta){
+  const P=PLATFORMS[d.plat];
+  const def = d.plat==='ytmusic'
+    ? (meta.opts.find(o=>o.kind==='audio')||meta.opts[0])
+    : (meta.opts.find(o=>o.kind==='video')||meta.opts[0]);
+  sel=def;
+  const el=document.createElement('div'); el.className='result';
+  el.innerHTML=`
+    <div class="thumb">
+      ${meta.thumb? `<img src="${esc(meta.thumb)}" alt="thumbnail preview" onerror="this.style.display='none'">`:''}
+      <span class="ptag">${P.label}</span><span class="badge">${fmtDur(meta.dur)}</span>
+    </div>
+    <div class="rmeta">
+      <div class="rtitle">${esc(meta.title)}</div>
+      <div class="rsub">${esc(meta.sub)} · engine: ${esc(meta.by)}</div>
+      ${['video','audio'].map(kind=>{
+        const os=meta.opts.filter(o=>o.kind===kind); if(!os.length) return '';
+        return `<div class="fmt-row"><span class="fmt-lab">${kind.toUpperCase()}</span>
+          <div class="pills">${os.map(o=>
+            `<button class="pill ${o===sel?'sel':''}" data-k="${o.kind}" data-q="${o.q}">${o.label}</button>`).join('')}</div></div>`;
+      }).join('')}
+      <div class="fsize">est. size ≈ <b id="fSize">—</b> · container <b id="fCont">${sel.kind==='video'?'MP4':'MP3'}</b>${MODE==='live'?'':' · demo estimate'}</div>
+      <button class="dl" id="dlBtn" data-cursor="RIP">
+        <span class="prog"></span>
+        <span class="lab"><i data-lucide="download"></i><span id="dlLab"></span></span>
+      </button>
+    </div>`;
+  stage.appendChild(el); lucide.createIcons();
+
+  const pills=$$('.pill'), fSize=$('#fSize'), fCont=$('#fCont'),
+        dlBtn=$('#dlBtn'), dlLab=$('#dlLab'), progEl=dlBtn.querySelector('.prog');
+  const refresh=()=>{
+    fSize.textContent=sel.mb.toFixed(1)+' MB';
+    fCont.textContent=sel.kind==='video'?'MP4':'MP3';
+    dlLab.textContent=`Rip ${sel.label} — ≈${sel.mb.toFixed(0)} MB`;
+  };
+  pills.forEach(p=>p.addEventListener('click',()=>{
+    sel=meta.opts.find(o=>o.kind===p.dataset.k && o.q==p.dataset.q);
+    pills.forEach(x=>x.classList.toggle('sel',x===p)); refresh();
+  }));
+  refresh();
+
+  dlBtn.addEventListener('click', async ()=>{
+    pills.forEach(p=>p.disabled=true); dlBtn.disabled=true; dlBtn.classList.add('ripping');
+    const res=await doRip({url:curUrl, opt:sel, meta,
+      prog:v=>progEl.style.width=v+'%', label:t=>dlLab.textContent=t});
+    if(res.ok){
+      dlLab.textContent=`Saved — ${res.mb.toFixed(1)} MB · tap to rip again`;
+      countGrab(P.short);
+      toast(MODE==='live'? `Real file saved — ${res.mb.toFixed(1)} MB. Enjoy.` :
+        `Demo rip complete — connect server.py for real files (see FAQ).`,'check');
+    }else{
+      dlLab.textContent='Rip failed — tap to retry';
+      toast('Rip failed: '+res.err,'alert-triangle');
+    }
+    dlBtn.classList.remove('ripping'); dlBtn.disabled=false;
+    progEl.style.width='0'; pills.forEach(p=>p.disabled=false); refresh();
+  });
+}
+
+/* ---------- batch queue ---------- */
+ $$('.tab').forEach(t=>t.addEventListener('click',()=>{
+  $$('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  const batch=t.dataset.tab==='batch';
+  $('#batchPanel').hidden=!batch;
+  $('#grabber').hidden=batch;
+  stage.innerHTML='';
+}));
+const bBox=$('#batchBox');
+function parseBatch(){
+  const lines=bBox.value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+  const seen=new Set(), items=[], invalid=[];
+  lines.forEach(l=>{
+    const m=l.match(/https?:\/\/\S+/); const url=m?m[0]:l;
+    const d=detect(url);
+    if(d && !seen.has(url)){ seen.add(url); items.push({url,d}); }
+    else if(!d) invalid.push(l);
+  });
+  return {items, invalid};
+}
+bBox.addEventListener('input',()=>{ $('#bCount').textContent=parseBatch().items.length+' valid links detected'; });
+ $('#bGo').addEventListener('click', async ()=>{
+  if(busy) return;
+  const {items, invalid}=parseBatch();
+  if(invalid.length) toast(`${invalid.length} line(s) skipped — not IG/YT links`,'alert-triangle');
+  if(!items.length){ toast('Paste at least one valid link first','alert-triangle'); return; }
+  busy=true; $('#bGo').disabled=true; $('#bSummary').textContent='';
+  const q=$('#queue'); q.innerHTML='';
+  let doneN=0, totalMB=0;
+  for(let i=0;i<items.length;i++){
+    const it=items[i], P=PLATFORMS[it.d.plat];
+    const row=document.createElement('div'); row.className='q-row';
+    row.innerHTML=`
+      <span class="q-idx">${pad(i+1)}</span>
+      <span class="q-plat">${P.short}</span>
+      <span class="q-url">${esc(it.url)}</span>
+      <div class="q-main">
+        <div class="q-bar"><i></i></div>
+        <span class="q-status">waiting…</span>
+      </div>`;
+    q.appendChild(row);
+    const barI=row.querySelector('.q-bar i'), st=row.querySelector('.q-status');
+
+    let meta;
+    if(MODE==='live'){
+      st.textContent='reading metadata…'; barI.style.width='8%';
+      try{
+        const r=await fetch(API+'api/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:it.url})});
+        const j=await r.json(); if(!r.ok) throw new Error(j.error||'info failed');
+        meta=liveMeta(j,it.d);
+      }catch(e){ row.classList.add('err'); st.textContent='error: '+e.message; continue; }
+    }else{ meta=demoMeta(it.d); await sleep(150); }
+
+    const opt = it.d.plat==='ytmusic'
+      ? (meta.opts.find(o=>o.kind==='audio')||meta.opts[0])
+      : (meta.opts.find(o=>o.kind==='video')||meta.opts[0]);
+    st.textContent=`ripping ${opt.label}…`;
+    const res=await doRip({url:it.url, opt, meta,
+      prog:v=>barI.style.width=v+'%', label:t=>st.textContent=t});
+    if(res.ok){
+      row.classList.add('done'); barI.style.width='100%';
+      st.textContent=`done — ${opt.label} · ${res.mb.toFixed(1)} MB`;
+      doneN++; totalMB+=res.mb; countGrab(P.short);
+    }else{
+      row.classList.add('err'); st.textContent='failed: '+res.err;
+    }
+  }
+  $('#bSummary').innerHTML=`<b>${doneN}/${items.length}</b> ripped · ≈<b>${totalMB.toFixed(1)} MB</b> ${MODE==='live'?'saved':'(demo)'}`;
+  busy=false; $('#bGo').disabled=false;
+  toast(`Batch finished — ${doneN} of ${items.length} ripped`,'check');
+});
+
+/* ============================================================
+   QR SHARE — scan to open ripr. (or the current link) on a phone
+   ============================================================ */
+(function qrShare(){
+  const back=$('#qrBack'), canvas=$('#qrCanvas'), urlLab=$('#qrUrl'),
+        fb=$('#qrFallback'), linkTab=$('#qrLinkTab');
+  if(!back) return;
+  if(window.qrcode && qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8'])
+    qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+
+  let mode='site', current='';
+
+  function targetUrl(){
+    if(mode==='link'){ const d=detect(urlIn.value); if(d) return urlIn.value.trim(); }
+    if(location.protocol==='file:' || !location.origin || location.origin==='null') return location.href;
+    return location.origin + location.pathname;
+  }
+  function buildQR(text){
+    if(typeof qrcode==='undefined') return null;
+    try{ const qr=qrcode(0,'H'); qr.addData(text,'Byte'); qr.make(); return qr; }
+    catch(e){ return null; }
+  }
+  function drawQR(cv, qr, size){
+    const n=qr.getModuleCount(), quiet=4;
+    const scale=Math.max(3, Math.floor(size/(n+quiet*2)));
+    const px=(n+quiet*2)*scale;
+    cv.width=cv.height=px;
+    const g=cv.getContext('2d');
+    g.fillStyle='#F2EFE6'; g.fillRect(0,0,px,px);
+    g.fillStyle='#17150E';
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)
+      if(qr.isDark(r,c)) g.fillRect((c+quiet)*scale,(r+quiet)*scale,scale,scale);
+    /* branded center badge — covers ~5% of area, ECC H recovers 30%: scanner-safe */
+    if(px>=240){
+      const s=Math.round(px*0.19), x=Math.round((px-s)/2), p2=Math.max(4,Math.round(scale*2.5));
+      g.fillStyle='#F2EFE6';
+      if(g.roundRect){ g.beginPath(); g.roundRect(x-p2,x-p2,s+p2*2,s+p2*2,s*0.22); g.fill(); }
+      else g.fillRect(x-p2,x-p2,s+p2*2,s+p2*2);
+      g.fillStyle='#FF4D00';
+      if(g.roundRect){ g.beginPath(); g.roundRect(x,x,s,s,s*0.2); g.fill(); }
+      else g.fillRect(x,x,s,s);
+      g.fillStyle='#17150E';
+      g.font=`800 ${Math.round(s*0.52)}px 'Bricolage Grotesque', sans-serif`;
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillText('r.', x+s/2, x+s*0.54);
+    }
+    return px;
+  }
+  function render(){
+    current=targetUrl(); urlLab.textContent=current;
+    const qr=buildQR(current);
+    if(!qr){ fb.hidden=false; canvas.style.display='none'; return; }
+    fb.hidden=true; canvas.style.display='block';
+    drawQR(canvas, qr, 720);
+  }
+  function openQR(m){
+    mode=m||'site';
+    linkTab.disabled=!detect(urlIn.value);
+    if(linkTab.disabled && mode==='link') mode='site';
+    $$('.qr-tab').forEach(t=>t.classList.toggle('on',t.dataset.mode===mode));
+    back.hidden=false; render();
+  }
+  $('#qrBtn').addEventListener('click',()=>openQR('site'));
+  $('#qrBtn2').addEventListener('click',()=>openQR('site'));
+  $$('.qr-tab').forEach(t=>t.addEventListener('click',()=>openQR(t.dataset.mode)));
+  $('#qrClose').addEventListener('click',()=>back.hidden=true);
+  back.addEventListener('click',e=>{ if(e.target===back) back.hidden=true; });
+  addEventListener('keydown',e=>{ if(e.key==='Escape'&&!back.hidden) back.hidden=true; });
+  $('#qrCopy').addEventListener('click',async()=>{
+    try{ await navigator.clipboard.writeText(current); toast('Link copied — paste it anywhere','clipboard'); }
+    catch(e){ toast('Copy blocked by the browser','alert-triangle'); }
+  });
+  $('#qrPng').addEventListener('click',()=>{
+    const qr=buildQR(current); if(!qr){ toast('QR engine not loaded yet','alert-triangle'); return; }
+    const off=document.createElement('canvas');
+    drawQR(off, qr, 1536);
+    off.toBlob(b=>{ if(b){ saveBlob(b,'ripr-qr.png');
+      toast('ripr-qr.png saved — print it, stick it on the notice board','check'); } },'image/png');
+  });
+})();
+
+/* ============================================================
+   FAQ + MISC
+   ============================================================ */
+ $$('.faq-q').forEach(q=>q.addEventListener('click',()=>{
+  const item=q.parentElement, open=item.classList.contains('open');
+  $$('.faq-item.open').forEach(o=>{ o.classList.remove('open'); o.querySelector('.faq-q').setAttribute('aria-expanded','false'); });
+  if(!open){ item.classList.add('open'); q.setAttribute('aria-expanded','true'); }
+}));
+ $('#topBtn').addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+
+/* share-target / shared-link entry: ?url= or ?text= or ?title= */
+(function shareEntry(){
+  const sp=new URLSearchParams(location.search);
+  const shared=sp.get('url')||sp.get('text')||sp.get('title');
+  if(!shared) return;
+  const m=String(shared).match(/https?:\/\/\S+/);
+  if(m && detect(m[0])){
+    urlIn.value=m[0]; setChips(detect(m[0]));
+    setTimeout(()=>grab(), reduced?50:1700);
+    history.replaceState(null,'',location.pathname);
+    toast('Link received from share — ripping','zap');
+  }
+})();
+</script>
+</body>
+</html>
