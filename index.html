@@ -790,7 +790,36 @@ function saveBlob(blob, name){
   a.href=URL.createObjectURL(blob); a.download=name; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 }
+/* ---------- Save to phone storage ---------- */
+async function saveToDevice(blob, filename, mime) {
+  // correct mime + extension so the phone recognises it as video/audio
+  const file = new File([blob], filename, { type: mime || blob.type });
 
+  // 1) Phones: native share sheet → "Save to Gallery / Photos / Files"
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: filename });
+      return; // saved via gallery — done
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user closed the sheet
+      // any other error → fall through to normal download
+    }
+  }
+
+  // 2) Desktop / fallback: normal download → Downloads folder
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+  const isAudio = pickedFormat.includes('mp3');
+saveToDevice(blob,
+  `ripr-${Date.now()}.${isAudio ? 'mp3' : 'mp4'}`,
+  isAudio ? 'audio/mpeg' : 'video/mp4');
 /* ============================================================
    ANALYTICS ENGINE — local always, mirrored to server if LIVE
    ============================================================ */
