@@ -33,7 +33,4 @@ HTML/CSS/JS · zero frameworks · Flask + yt-dlp · one service worker.
 
 ## License
 
-[MIT](LICENSE) © 2025 Puneeth Acharya · personal/offline use only — respect creators.
-````
-
-That's it — 30 lines, tells recruiters everything in one screen.
+[MIT](LICENSE) © 2025 Puneeth Acharya 
