@@ -816,10 +816,6 @@ async function saveToDevice(blob, filename, mime) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
-  const isAudio = pickedFormat.includes('mp3');
-saveToDevice(blob,
-  `ripr-${Date.now()}.${isAudio ? 'mp3' : 'mp4'}`,
-  isAudio ? 'audio/mpeg' : 'video/mp4');
 /* ============================================================
    ANALYTICS ENGINE — local always, mirrored to server if LIVE
    ============================================================ */
@@ -1235,7 +1231,9 @@ async function doRip({url, opt, meta, prog, label}){
       const blob=new Blob(chunks);
       const cd=res.headers.get('Content-Disposition')||'';
       const m=cd.match(/filename="?([^"]+)"?/);
-      saveBlob(blob, m? m[1] : `ripr-${Date.now()}.${opt.kind==='audio'?'mp3':'mp4'}`);
+      const isAudio=opt.kind==='audio';
+      const fname=m? m[1] : `ripr-${Date.now()}.${isAudio?'mp3':'mp4'}`;
+      await saveToDevice(blob, fname, isAudio?'audio/mpeg':'video/mp4');
       return {ok:true, mb:blob.size/1e6};
     }catch(e){ return {ok:false, err:e.message||'rip failed'}; }
   }
